@@ -1,5 +1,8 @@
 import json, socket
+import base64
 
+# forked from https://github.com/mdebbar/jsonsocket
+# added 
 class Server(object):
   """
   A JSON socket server used to communicate with a JSON socket client. All the
@@ -106,29 +109,33 @@ class Client(object):
 def _send(socket, data):
   try:
     serialized = json.dumps(data)
-  except (TypeError, ValueError), e:
+  except (TypeError, ValueError) as e:
     raise Exception('You can only send JSON-serializable data')
+  encoded = base64.encodebytes(serialized.encode())
   # send the length of the serialized data first
-  socket.send('%d\n' % len(serialized))
+  socket.send(b'%d\n' % len(encoded))
   # send the serialized data
-  socket.sendall(serialized)
+  socket.sendall(encoded)
 
 def _recv(socket):
   # read the length of the data, letter by letter until we reach EOL
   length_str = ''
-  char = socket.recv(1)
+  char = socket.recv(1).decode('utf-8')
   while char != '\n':
     length_str += char
-    char = socket.recv(1)
+    char = socket.recv(1).decode('utf-8')
   total = int(length_str)
-  # use a memoryview to receive the data chunk by chunk efficiently
-  view = memoryview(bytearray(total))
+  
+  view = ''
   next_offset = 0
   while total - next_offset > 0:
-    recv_size = socket.recv_into(view[next_offset:], total - next_offset)
+    recv = socket.recv(total - next_offset).decode('utf-8')
+    recv_size = len(recv)
+    view += recv
     next_offset += recv_size
+  decoded = base64.b64decode(view)
   try:
-    deserialized = json.loads(view.tobytes())
-  except (TypeError, ValueError), e:
+    deserialized = json.loads(decoded)
+  except (TypeError, ValueError) as e:
     raise Exception('Data received was not in JSON format')
   return deserialized
