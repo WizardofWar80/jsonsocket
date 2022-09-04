@@ -2,7 +2,8 @@ import json, socket
 import base64
 
 # forked from https://github.com/mdebbar/jsonsocket
-# added 
+# added base64 encoding and decoding, it would not work without for me
+
 class Server(object):
   """
   A JSON socket server used to communicate with a JSON socket client. All the
